@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Score · Churn Intelligence{% endblock %}
+
+{% block content %}
+<section class="hero fade-in">
+  <div>
+    <div class="eyebrow" style="margin-bottom: 18px;">Issue No. 01 · Customer Retention Analytics</div>
+    <h1 class="hero-title">Predict <em>who leaves</em><br>before they do.</h1>
+    <p class="hero-lede">
+      An ML-driven intelligence layer that scores every customer's churn risk,
+      attributes the decision to specific factors, and routes them to the right
+      retention play — all on Google Cloud's serverless stack.
+    </p>
+  </div>
+  <div class="hero-meta">
+    <dl>
+      <div><dt>Model</dt><dd>{{ model_version }}</dd></div>
+      <div><dt>Algorithm</dt><dd>XGBoost · SHAP</dd></div>
+      <div><dt>Latency target</dt><dd>&lt; 200ms p95</dd></div>
+      <div><dt>Coverage</dt><dd>7,043 customers</dd></div>
+    </dl>
+  </div>
+</section>
+
+<div class="grid grid-3" style="grid-template-columns: 1fr 2fr;">
+  <!-- Existing customer -->
+  <div class="panel fade-in" style="animation-delay: 0.1s;">
+    <div class="panel-header">
+      <h2 class="panel-title">From the ledger</h2>
+      <span class="eyebrow">01</span>
+    </div>
+    <p class="text-muted" style="font-size: 13px; margin-bottom: 20px;">
+      Pull a known customer from BigQuery and run a fresh prediction.
+    </p>
+    <form method="POST" action="{{ url_for('predict_ui') }}">
+      <input type="hidden" name="use_existing" value="1">
+      <div class="field">
+        <label class="field-label">Customer Identifier</label>
+        <select name="customerID" class="select" required>
+          <option value="">— select customer —</option>
+          {% for cid in sample_ids %}
+            <option value="{{ cid }}">{{ cid }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+        Run Prediction →
+      </button>
+    </form>
+  </div>
+
+  <!-- Manual entry -->
+  <div class="panel fade-in" style="animation-delay: 0.15s;">
+    <div class="panel-header">
+      <h2 class="panel-title">By hand</h2>
+      <span class="eyebrow">02 · Manual Entry</span>
+    </div>
+    <form method="POST" action="{{ url_for('predict_ui') }}">
+      <div class="grid-form" style="display: grid;">
+        {% set yn = ["Yes", "No"] %}
+        {% set yn_ns = ["Yes", "No", "No internet service"] %}
+        {% set yn_np = ["Yes", "No", "No phone service"] %}
+
+        <div class="field">
+          <label class="field-label">Gender</label>
+          <select name="gender" class="select"><option>Male</option><option>Female</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">Senior Citizen</label>
+          <select name="SeniorCitizen" class="select"><option value="0">No</option><option value="1">Yes</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">Partner</label>
+          <select name="Partner" class="select">{% for o in yn %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Dependents</label>
+          <select name="Dependents" class="select">{% for o in yn %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Tenure (months)</label>
+          <input type="number" name="tenure" min="0" max="100" value="12" class="input">
+        </div>
+        <div class="field">
+          <label class="field-label">Phone Service</label>
+          <select name="PhoneService" class="select">{% for o in yn %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Multiple Lines</label>
+          <select name="MultipleLines" class="select">{% for o in yn_np %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Internet Service</label>
+          <select name="InternetService" class="select"><option>DSL</option><option>Fiber optic</option><option>No</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">Online Security</label>
+          <select name="OnlineSecurity" class="select">{% for o in yn_ns %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Online Backup</label>
+          <select name="OnlineBackup" class="select">{% for o in yn_ns %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Device Protection</label>
+          <select name="DeviceProtection" class="select">{% for o in yn_ns %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Tech Support</label>
+          <select name="TechSupport" class="select">{% for o in yn_ns %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Streaming TV</label>
+          <select name="StreamingTV" class="select">{% for o in yn_ns %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Streaming Movies</label>
+          <select name="StreamingMovies" class="select">{% for o in yn_ns %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Contract</label>
+          <select name="Contract" class="select">
+            <option>Month-to-month</option><option>One year</option><option>Two year</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Paperless Billing</label>
+          <select name="PaperlessBilling" class="select">{% for o in yn %}<option>{{ o }}</option>{% endfor %}</select>
+        </div>
+        <div class="field">
+          <label class="field-label">Payment Method</label>
+          <select name="PaymentMethod" class="select">
+            <option>Electronic check</option><option>Mailed check</option>
+            <option>Bank transfer (automatic)</option><option>Credit card (automatic)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Monthly Charges (USD)</label>
+          <input type="number" name="MonthlyCharges" step="0.01" min="0" value="70.00" class="input">
+        </div>
+        <div class="field col-span-2">
+          <label class="field-label">Total Charges (USD)</label>
+          <input type="number" name="TotalCharges" step="0.01" min="0" value="840.00" class="input">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+        <button type="submit" class="btn btn-primary">Predict Churn →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Prediction · Churn Intelligence{% endblock %}
+
+{% block content %}
+{% set prob_pct = (prediction.churn_probability * 100) | round(1) %}
+{% set tier = prediction.risk_tier %}
+{% set tier_class = {'High': 'tier-high', 'Medium': 'tier-med', 'Low': 'tier-low'}[tier] %}
+{% set tier_color = {'High': '#ef4444', 'Medium': '#f59e0b', 'Low': '#10b981'}[tier] %}
+
+<div class="page-header fade-in">
+  <div>
+    <div class="eyebrow" style="margin-bottom: 12px;">Verdict · {{ customer.get('customerID', '—') }}</div>
+    <h1 class="page-title">A <em>{{ tier|lower }}-risk</em> case.</h1>
+  </div>
+  <div class="page-meta">
+    <div>Generated {{ "now" }}</div>
+    <strong>{{ prediction.model_version }}</strong>
+  </div>
+</div>
+
+<div class="grid stagger" style="grid-template-columns: 0.9fr 1.1fr; gap: 24px;">
+  <!-- Gauge + summary -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">The score</h2>
+      <span class="tier-badge {{ tier_class }}">{{ tier }} Risk</span>
+    </div>
+
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 240 140" style="width: 100%; max-width: 300px;">
+        <defs>
+          <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="{{ tier_color }}" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="{{ tier_color }}" stop-opacity="1"/>
+          </linearGradient>
+        </defs>
+        <!-- Background arc -->
+        <path d="M 24 116 A 96 96 0 0 1 216 116" fill="none" stroke="#2a2a30" stroke-width="2"/>
+        <!-- Foreground arc -->
+        <path d="M 24 116 A 96 96 0 0 1 216 116"
+              fill="none" stroke="url(#gauge-grad)" stroke-width="3"
+              stroke-dasharray="301.6"
+              stroke-dashoffset="{{ 301.6 - (prob_pct / 100 * 301.6) }}"
+              style="transition: stroke-dashoffset 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);"/>
+      </svg>
+      <div class="gauge-value">{{ prob_pct }}<span class="gauge-pct">%</span></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <dl class="profile-grid" style="grid-template-columns: 1fr;">
+      <div class="profile-row"><dt>Customer ID</dt><dd>{{ customer.get('customerID', '—') }}</dd></div>
+      <div class="profile-row"><dt>Verdict</dt><dd class="{{ tier_class }}">{{ prediction.prediction }}</dd></div>
+      <div class="profile-row"><dt>Est. CLTV (24mo)</dt><dd>${{ "{:,.0f}".format(cltv) }}</dd></div>
+      <div class="profile-row"><dt>Tenure</dt><dd>{{ customer.get('tenure', '—') }} mo</dd></div>
+      <div class="profile-row"><dt>Contract</dt><dd>{{ customer.get('Contract', '—') }}</dd></div>
+      <div class="profile-row"><dt>Monthly</dt><dd>${{ customer.get('MonthlyCharges', '—') }}</dd></div>
+    </dl>
+  </div>
+
+  <!-- Top factors -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Why we said so</h2>
+      <span class="eyebrow">SHAP Attribution</span>
+    </div>
+    {% if prediction.top_factors %}
+      {% set max_imp = prediction.top_factors[0].importance if prediction.top_factors else 1 %}
+      <div>
+        {% for f in prediction.top_factors %}
+          <div class="factor-row">
+            <div class="factor-meta">
+              <span class="factor-name">{{ f.feature }}</span>
+              <span class="factor-value">{{ f.value }}</span>
+            </div>
+            <div class="factor-bar">
+              <div class="factor-bar-fill"
+                   style="width: {{ ((f.importance / max_imp) * 100) | round(1) }}%; animation-delay: {{ loop.index0 * 0.1 }}s;"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="text-dim mono" style="font-size: 11px; margin-top: 20px; letter-spacing: 0.05em;">
+        Bar length corresponds to mean absolute SHAP value across the test set.
+      </p>
+    {% else %}
+      <p class="text-muted">No factor data available.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="panel mt-6 fade-in" style="animation-delay: 0.3s;">
+  <div class="panel-header">
+    <h2 class="panel-title">The play</h2>
+    <span class="eyebrow">{{ recommendations|length }} Recommended Action{{ 's' if recommendations|length != 1 }}</span>
+  </div>
+  <div>
+    {% for r in recommendations %}
+      <div class="rec">
+        <div class="rec-num">{{ "%02d"|format(loop.index) }}</div>
+        <div>
+          <h3 class="rec-title">{{ r.title }}</h3>
+          <p class="rec-detail">{{ r.detail }}</p>
+          <div class="rec-meta">
+            <span>Channel · <strong>{{ r.action_type }}</strong></span>
+            <span>Est. cost · <strong>${{ r.estimated_cost }}</strong></span>
+            <span>Priority · <strong>P{{ r.priority }}</strong></span>
+          </div>
+        </div>
+        <button class="btn btn-sm log-action-btn"
+                data-customer-id="{{ customer.get('customerID', '') }}"
+                data-action-type="{{ r.action_type }}"
+                data-action-detail="{{ r.title }}"
+                data-cost="{{ r.estimated_cost }}">
+          Mark Taken
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="flex gap-3 mt-6">
+  <a href="{{ url_for('customer_360', customer_id=customer.get('customerID', '')) }}" class="btn">
+    Customer 360 →
+  </a>
+  <a href="{{ url_for('whatif_page') }}?customerID={{ customer.get('customerID', '') }}" class="btn">
+    Run Simulator →
+  </a>
+  <a href="{{ url_for('index') }}" class="btn btn-ghost">← Score another</a>
+</div>
+{% endblock %}
