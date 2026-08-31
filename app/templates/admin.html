@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Admin · Churn Intelligence{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <div>
+    <div class="eyebrow" style="margin-bottom: 12px;">Operations Console</div>
+    <h1 class="page-title">The <em>control room</em>.</h1>
+  </div>
+  <div class="page-meta">
+    <div>Restricted access</div>
+    <strong>Admin only</strong>
+  </div>
+</div>
+
+<div class="grid grid-4 stagger">
+  <div class="stat-card">
+    <div class="stat-label">Customers</div>
+    <div class="stat-value">{{ "{:,}".format(stats.get('total_customers', 0) or 0) }}</div>
+    <span class="stat-delta">across all segments</span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Churned</div>
+    <div class="stat-value text-high">{{ "{:,}".format(stats.get('churned_customers', 0) or 0) }}</div>
+    <span class="stat-delta">total historical</span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Churn Rate</div>
+    <div class="stat-value">
+      {% if stats.get('churn_rate') %}{{ (stats.churn_rate * 100) | round(2) }}<span class="gauge-pct" style="font-size: 24px;">%</span>{% else %}—{% endif %}
+    </div>
+    <span class="stat-delta">moving average</span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Annual Revenue</div>
+    <div class="stat-value">${{ "{:,.0f}".format(stats.get('annual_revenue', 0) or 0) }}</div>
+    <span class="stat-delta">est. from MRR</span>
+  </div>
+</div>
+
+<div class="grid grid-2 mt-6">
+  <div class="panel fade-in">
+    <div class="panel-header">
+      <h2 class="panel-title">Model</h2>
+      <span class="eyebrow">Deployed</span>
+    </div>
+    <dl class="profile-grid" style="grid-template-columns: 1fr;">
+      <div class="profile-row"><dt>Active version</dt><dd>{{ model_version }}</dd></div>
+      <div class="profile-row"><dt>Status</dt><dd class="tier-low">● Ready</dd></div>
+      <div class="profile-row"><dt>Algorithm</dt><dd>XGBoost · SHAP</dd></div>
+      <div class="profile-row"><dt>Inference</dt><dd>Bundled (joblib)</dd></div>
+    </dl>
+    <p class="text-dim mt-4" style="font-size: 12px; line-height: 1.6;">
+      To deploy a new version, retrain in Vertex AI Workbench
+      (<span class="mono">notebooks/train_churn_model.ipynb</span>),
+      upload to GCS, rebuild and redeploy.
+    </p>
+  </div>
+
+  <div class="panel fade-in" style="animation-delay: 0.1s;">
+    <div class="panel-header">
+      <h2 class="panel-title">Gemini · Email Forge</h2>
+      <span class="eyebrow">AI-Generated</span>
+    </div>
+    <div class="field">
+      <label class="field-label">Target Customer</label>
+      <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px;">
+        <input id="cid" type="text" class="input" placeholder="e.g. 7590-VHVEG">
+        <button id="gen-btn" class="btn btn-primary">Generate</button>
+      </div>
+    </div>
+    <div id="gen-status" class="mono text-dim mt-4" style="font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;"></div>
+    <div id="gen-out" class="mt-4 hidden">
+      <div class="eyebrow" style="margin-bottom: 8px;">Offer Used</div>
+      <div id="gen-offer" class="mono text-accent" style="font-size: 12px; margin-bottom: 16px;"></div>
+      <div class="eyebrow" style="margin-bottom: 8px;">Generated Email</div>
+      <textarea id="gen-email" rows="10" class="input"></textarea>
+      <button id="copy-btn" class="btn btn-ghost mt-4">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('gen-btn').addEventListener('click', async () => {
+  const cid = document.getElementById('cid').value.trim();
+  const status = document.getElementById('gen-status');
+  const out = document.getElementById('gen-out');
+  if (!cid) { status.textContent = '! Enter a customer ID.'; return; }
+  status.textContent = '> Calling Gemini...';
+
+  const form = new FormData();
+  form.append('customer_id', cid);
+  const r = await fetch('/admin/generate-email', { method: 'POST', body: form });
+  const data = await r.json();
+  if (data.error) { status.textContent = '! ' + data.error; return; }
+
+  status.textContent = '✓ Generated.';
+  out.classList.remove('hidden');
+  document.getElementById('gen-offer').textContent = data.offer.title;
+  document.getElementById('gen-email').value = data.email;
+});
+
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const ta = document.getElementById('gen-email');
+  ta.select();
+  document.execCommand('copy');
+  document.getElementById('copy-btn').textContent = '✓ Copied';
+  setTimeout(() => { document.getElementById('copy-btn').textContent = 'Copy to Clipboard'; }, 2000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Simulator · Churn Intelligence{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <div>
+    <div class="eyebrow" style="margin-bottom: 12px;">Counterfactual Simulator</div>
+    <h1 class="page-title">What if we <em>changed</em> something?</h1>
+  </div>
+  <div class="page-meta">
+    <div>Live model inference</div>
+    <strong>Toggle attributes →</strong>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Choose a customer</h2>
+    <span class="eyebrow">Step 01</span>
+  </div>
+  <div class="grid grid-3">
+    <div class="field" style="grid-column: span 3; max-width: 480px;">
+      <label class="field-label">Customer Identifier</label>
+      <select id="customer-select" class="select">
+        <option value="">— select —</option>
+        {% for cid in sample_ids %}<option>{{ cid }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+
+<div id="whatif-area" class="panel mt-6 hidden">
+  <div class="panel-header">
+    <h2 class="panel-title">Adjust attributes</h2>
+    <span class="eyebrow">Step 02</span>
+  </div>
+  <div class="grid grid-3">
+    <div class="field">
+      <label class="field-label">Contract</label>
+      <select id="ovr-contract" class="select">
+        <option value="">(no change)</option>
+        <option>Month-to-month</option><option>One year</option><option>Two year</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Tech Support</label>
+      <select id="ovr-techsupport" class="select">
+        <option value="">(no change)</option><option>Yes</option><option>No</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Online Security</label>
+      <select id="ovr-onlinesecurity" class="select">
+        <option value="">(no change)</option><option>Yes</option><option>No</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Payment Method</label>
+      <select id="ovr-payment" class="select">
+        <option value="">(no change)</option>
+        <option>Electronic check</option><option>Mailed check</option>
+        <option>Bank transfer (automatic)</option><option>Credit card (automatic)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Monthly Charges (USD)</label>
+      <input id="ovr-monthly" type="number" step="0.01" class="input" placeholder="leave blank for no change">
+    </div>
+  </div>
+  <button id="run-whatif" class="btn btn-primary mt-4">Run Simulation →</button>
+</div>
+
+<div id="whatif-result" class="mt-6 hidden fade-in">
+  <div class="eyebrow" style="margin-bottom: 12px;">Step 03 · Comparison</div>
+  <div class="compare">
+    <div class="compare-cell">
+      <div class="compare-label">Original</div>
+      <div id="orig-prob" class="compare-value">—</div>
+      <div id="orig-tier" class="compare-tier text-muted"></div>
+    </div>
+    <div class="compare-cell">
+      <div class="compare-label">After Changes</div>
+      <div id="new-prob" class="compare-value">—</div>
+      <div id="new-tier" class="compare-tier text-muted"></div>
+    </div>
+    <div class="compare-cell">
+      <div class="compare-label">Delta</div>
+      <div id="delta" class="compare-value">—</div>
+      <div id="delta-label" class="compare-tier text-muted"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const selectEl = document.getElementById('customer-select');
+  const area = document.getElementById('whatif-area');
+  const result = document.getElementById('whatif-result');
+  const runBtn = document.getElementById('run-whatif');
+  let baseCustomer = null;
+
+  const params = new URLSearchParams(location.search);
+  if (params.get('customerID')) {
+    selectEl.value = params.get('customerID');
+    selectEl.dispatchEvent(new Event('change'));
+  }
+
+  selectEl.addEventListener('change', async () => {
+    const cid = selectEl.value;
+    if (!cid) { area.classList.add('hidden'); return; }
+    const r = await fetch(`/api/customers/${cid}`);
+    if (!r.ok) { alert('Failed to load customer'); return; }
+    const data = await r.json();
+    baseCustomer = data.customer;
+    area.classList.remove('hidden');
+  });
+
+  runBtn?.addEventListener('click', async () => {
+    if (!baseCustomer) return;
+    const overrides = {};
+    const fields = {
+      Contract: 'ovr-contract', TechSupport: 'ovr-techsupport',
+      OnlineSecurity: 'ovr-onlinesecurity', PaymentMethod: 'ovr-payment'
+    };
+    for (const [k, id] of Object.entries(fields)) {
+      const v = document.getElementById(id).value;
+      if (v) overrides[k] = v;
+    }
+    const m = document.getElementById('ovr-monthly').value;
+    if (m) overrides.MonthlyCharges = parseFloat(m);
+
+    runBtn.textContent = 'Computing...';
+    runBtn.disabled = true;
+    try {
+      const r = await fetch('/api/whatif', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({customer: baseCustomer, overrides})
+      });
+      const data = await r.json();
+      if (data.error) { alert(data.error); return; }
+
+      result.classList.remove('hidden');
+      const fmt = p => (p * 100).toFixed(1) + '%';
+      const classFor = t => t === 'High' ? 'tier-high' : t === 'Medium' ? 'tier-med' : 'tier-low';
+
+      const op = document.getElementById('orig-prob');
+      op.textContent = fmt(data.original.churn_probability);
+      op.className = 'compare-value ' + classFor(data.original.risk_tier);
+      document.getElementById('orig-tier').innerHTML = `<span class="tier-badge ${classFor(data.original.risk_tier)}">${data.original.risk_tier}</span>`;
+
+      const np = document.getElementById('new-prob');
+      np.textContent = fmt(data.counterfactual.churn_probability);
+      np.className = 'compare-value ' + classFor(data.counterfactual.risk_tier);
+      document.getElementById('new-tier').innerHTML = `<span class="tier-badge ${classFor(data.counterfactual.risk_tier)}">${data.counterfactual.risk_tier}</span>`;
+
+      const d = data.delta;
+      const dp = document.getElementById('delta');
+      dp.textContent = (d >= 0 ? '+' : '') + (d * 100).toFixed(1) + '%';
+      dp.className = 'compare-value ' + (d < 0 ? 'tier-low' : 'tier-high');
+      document.getElementById('delta-label').textContent = d < 0 ? 'Risk reduced' : (d > 0 ? 'Risk increased' : 'No change');
+    } finally {
+      runBtn.textContent = 'Run Simulation →';
+      runBtn.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

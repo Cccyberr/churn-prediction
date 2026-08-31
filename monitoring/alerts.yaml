@@ -1,0 +1,51 @@
+# =========================================================
+# Cloud Monitoring alert policies
+# Apply with:
+#   gcloud alpha monitoring policies create --policy-from-file=monitoring/alerts.yaml
+# =========================================================
+
+displayName: "Churn Platform — High Error Rate"
+documentation:
+  content: |
+    The Cloud Run service is returning 5xx responses at >1% of requests over 5 minutes.
+    Likely causes: model load failure, BigQuery permission issue, or downstream timeout.
+  mimeType: text/markdown
+combiner: OR
+conditions:
+  - displayName: "5xx error rate above 1%"
+    conditionThreshold:
+      filter: >
+        resource.type = "cloud_run_revision" AND
+        metric.type = "run.googleapis.com/request_count" AND
+        metric.label.response_code_class = "5xx"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.01
+      duration: 300s
+      aggregations:
+        - alignmentPeriod: 60s
+          perSeriesAligner: ALIGN_RATE
+notificationChannels: []
+enabled: true
+
+---
+
+displayName: "Churn Platform — High Request Latency"
+documentation:
+  content: |
+    p95 latency on /api/predict exceeded 2s over a 5-minute window.
+  mimeType: text/markdown
+combiner: OR
+conditions:
+  - displayName: "p95 latency > 2000ms"
+    conditionThreshold:
+      filter: >
+        resource.type = "cloud_run_revision" AND
+        metric.type = "run.googleapis.com/request_latencies"
+      comparison: COMPARISON_GT
+      thresholdValue: 2000
+      duration: 300s
+      aggregations:
+        - alignmentPeriod: 60s
+          perSeriesAligner: ALIGN_PERCENTILE_95
+notificationChannels: []
+enabled: true

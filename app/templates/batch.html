@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Batch · Churn Intelligence{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <div>
+    <div class="eyebrow" style="margin-bottom: 12px;">Bulk Scoring</div>
+    <h1 class="page-title">Score the <em>whole book</em>.</h1>
+  </div>
+  <div class="page-meta">
+    <div>CSV upload</div>
+    <strong>Up to 10k rows</strong>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Upload</h2>
+    <span class="eyebrow">CSV · UTF-8</span>
+  </div>
+
+  <label class="dropzone" id="dropzone">
+    <input id="csv-file" type="file" accept=".csv">
+    <div class="dropzone-label">Choose a CSV file →</div>
+    <span class="dropzone-hint" id="dropzone-name">No file selected</span>
+  </label>
+
+  <p class="text-dim mono" style="font-size: 11px; margin-top: 20px; line-height: 1.6;">
+    REQUIRED COLUMNS · customerID, gender, SeniorCitizen, Partner, Dependents,
+    tenure, PhoneService, MultipleLines, InternetService, OnlineSecurity, OnlineBackup,
+    DeviceProtection, TechSupport, StreamingTV, StreamingMovies, Contract,
+    PaperlessBilling, PaymentMethod, MonthlyCharges, TotalCharges
+  </p>
+
+  <button id="run-batch" class="btn btn-primary mt-4">Score CSV →</button>
+  <div id="batch-status" class="mono text-dim mt-4" style="font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;"></div>
+</div>
+
+<div id="batch-results" class="mt-6 hidden fade-in">
+  <div class="eyebrow" style="margin-bottom: 16px;">Results · Summary</div>
+  <div class="grid grid-3 stagger">
+    <div class="stat-card">
+      <div class="stat-label">Total Scored</div>
+      <div id="bsum-total" class="stat-value">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">High Risk</div>
+      <div id="bsum-high" class="stat-value text-high">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Medium Risk</div>
+      <div id="bsum-medium" class="stat-value text-med">0</div>
+    </div>
+  </div>
+
+  <div class="panel mt-6">
+    <div class="panel-header">
+      <h2 class="panel-title">Records</h2>
+      <span class="eyebrow">Sorted by Risk</span>
+    </div>
+    <div style="max-height: 600px; overflow: auto;">
+      <table class="data-table">
+        <thead><tr><th>Customer ID</th><th>Probability</th><th>Risk Tier</th></tr></thead>
+        <tbody id="batch-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fileInput = document.getElementById('csv-file');
+const dzName = document.getElementById('dropzone-name');
+fileInput.addEventListener('change', e => {
+  dzName.textContent = e.target.files[0]?.name || 'No file selected';
+});
+
+document.getElementById('run-batch').addEventListener('click', async () => {
+  const status = document.getElementById('batch-status');
+  const results = document.getElementById('batch-results');
+  if (!fileInput.files.length) { status.textContent = '! Choose a CSV file first.'; return; }
+  status.textContent = '> Uploading and scoring...';
+
+  const form = new FormData();
+  form.append('file', fileInput.files[0]);
+  const r = await fetch('/api/batch-predict', { method: 'POST', body: form });
+  const data = await r.json();
+  if (data.error) { status.textContent = '! Error: ' + data.error; return; }
+
+  status.textContent = '✓ Complete.';
+  results.classList.remove('hidden');
+
+  const rows = (data.results || []).sort((a, b) => b.churn_probability - a.churn_probability);
+  document.getElementById('bsum-total').textContent = data.count;
+  document.getElementById('bsum-high').textContent = rows.filter(r => r.risk_tier === 'High').length;
+  document.getElementById('bsum-medium').textContent = rows.filter(r => r.risk_tier === 'Medium').length;
+
+  const tbody = document.getElementById('batch-table');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const tc = r.risk_tier === 'High' ? 'tier-high' : r.risk_tier === 'Medium' ? 'tier-med' : 'tier-low';
+    tr.innerHTML = `
+      <td><strong>${r.customerID || r.customer_id || '—'}</strong></td>
+      <td>${(r.churn_probability * 100).toFixed(1)}%</td>
+      <td><span class="tier-badge ${tc}">${r.risk_tier}</span></td>`;
+    tbody.appendChild(tr);
+  });
+});
+</script>
+{% endblock %}

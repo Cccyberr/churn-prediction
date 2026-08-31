@@ -1,191 +1,93 @@
 # AI-Powered Customer Churn Prediction & Retention Analytics Platform
 
-> A cloud-native platform that predicts customer churn, explains customer risk, recommends retention actions, and provides executive analytics.
+**Course**: 23CSE363 Cloud Computing — Assignment / Mini-Project
+**Institution**: Amrita School of Engineering, Amritapuri
+**Team size**: 4 members
+**SDGs addressed**: SDG 8 (Decent Work & Economic Growth), SDG 9 (Industry, Innovation & Infrastructure)
 
-**Course:** 23CSE363 — Cloud Computing
-**Institution:** Amrita School of Engineering, Amritapuri
-**Team Size:** 4 Members
-**SDGs Addressed:** SDG 8 (Decent Work & Economic Growth), SDG 9 (Industry, Innovation & Infrastructure)
-
----
-
-## Project Overview
-
-The **AI-Powered Customer Churn Prediction & Retention Analytics Platform** is a multi-service cloud application designed to help organizations identify customers who are likely to churn.
-
-The platform provides:
-
-* Customer churn prediction
-* Risk-factor attribution and explainability
-* Personalized retention recommendations
-* What-If simulation for customer scenarios
-* Batch customer scoring
-* AI-generated retention emails
-* Executive analytics dashboards
-* REST API with Swagger documentation
-* Automated deployment and scheduled bulk scoring
-
-The project is built using Google Cloud Platform services and is designed to run efficiently within free-tier or low-cost limits.
+A production-grade, multi-service GCP platform that predicts customer churn,
+explains why each customer is at risk, recommends retention actions, and
+publishes executive analytics. Built end-to-end on Google Cloud free tier.
 
 ---
 
-# Architecture
+## Architecture
 
-```text
+```
                  ┌──────────────────────────────────────────────┐
                  │              END USERS                       │
-                 │   CSR · Manager · Analyst · API Consumer     │
+                 │   CSR · Manager · Analyst · API consumer     │
                  └────────────┬─────────────────────────────────┘
                               │ HTTPS
                               ▼
                  ┌──────────────────────────┐         ┌────────────────────┐
-                 │       Cloud Run          │ ───────▶│  Vertex AI (Opt.)  │
-                 │   Flask + Gunicorn       │         │ Endpoint / Model   │
-                 │                          │         └────────────────────┘
-                 │  • Score UI              │
-                 │  • What-If Simulator     │
-                 │  • Batch Upload          │
-                 │  • Admin + Gemini Email  │
-                 │  • REST API + Swagger    │
-                 └────────┬─────────────────┘
-                          │
-                ┌─────────┼─────────┐
-                ▼         ▼         ▼
-        ┌────────────┐ ┌────────┐ ┌──────────┐
-        │ BigQuery   │ │  GCS   │ │ Gemini   │
-        │            │ │        │ │   API    │
-        │ Customers  │ │ Models │ │Retention │
-        │ Predictions│ │Uploads │ │ Emails   │
-        │ Actions    │ └────────┘ └──────────┘
-        │ Metrics    │
-        │ Registry   │
-        └─────┬──────┘
-              │
-              ▼
-        ┌────────────────────┐
-        │   Looker Studio    │
-        │ Executive Dashboard│
+                 │  Cloud Run               │ ───────▶│ Vertex AI (opt.)   │
+                 │  Flask + Gunicorn        │         │ Endpoint / Model   │
+                 │  - Score UI              │         └────────────────────┘
+                 │  - What-If simulator     │
+                 │  - Batch upload          │ ◀───────┐
+                 │  - Admin + Gemini email  │         │
+                 │  - REST API + Swagger    │         │
+                 └────────┬─────────────────┘         │
+                          │                            │
+                ┌─────────┼─────────┐                  │
+                ▼         ▼         ▼                  │
+        ┌────────────┐ ┌────────┐ ┌──────────┐   ┌─────┴─────────┐
+        │ BigQuery   │ │  GCS   │ │ Gemini   │   │ Cloud Run Job │
+        │ - customers│ │ models │ │ retention│   │ bulk scorer   │
+        │ - preds    │ │ uploads│ │ emails   │   │ (nightly)     │
+        │ - actions  │ └────────┘ └──────────┘   └─────┬─────────┘
+        │ - metrics  │                                  │
+        │ - registry │ ◀────────────────────────────────┘
+        └─────┬──────┘                                  ▲
+              │                                          │
+              ▼                                  ┌───────┴────────┐
+        ┌────────────────────┐                   │ Cloud Scheduler│
+        │ Looker Studio      │                   │ 02:00 daily    │
+        │ Executive Dashboard│                   └────────────────┘
         └────────────────────┘
-
-
-        ┌────────────────────┐
-        │  Cloud Scheduler   │
-        │   Daily Schedule   │
-        └─────────┬──────────┘
-                  │
-                  ▼
-        ┌────────────────────┐
-        │   Cloud Run Job    │
-        │   Bulk Scoring     │
-        └─────────┬──────────┘
-                  │
-                  └──────────────▶ BigQuery
 ```
 
----
-
-## GCP Services Used
-
-* Cloud Run
-* Cloud Run Jobs
-* BigQuery
-* Cloud Storage
-* Vertex AI
-* Gemini API
-* Cloud Scheduler
-* Cloud Build
-* Cloud Logging
-* Cloud Monitoring
-* Looker Studio
+**GCP services used**: Cloud Run · Cloud Run Jobs · BigQuery · Cloud Storage ·
+Vertex AI · Gemini API · Cloud Scheduler · Cloud Build · Cloud Logging ·
+Cloud Monitoring · Looker Studio.
 
 ---
 
-# Key Features
+## Project structure
 
-### Churn Prediction
-
-Predicts the probability of a customer leaving the service using a machine learning model.
-
-### Explainable AI
-
-Identifies the major factors contributing to a customer's churn risk.
-
-### Retention Recommendations
-
-Provides rule-based recommendations to help retain high-risk customers.
-
-### What-If Simulator
-
-Allows users to modify customer attributes and observe how churn probability changes.
-
-### Batch Prediction
-
-Upload a CSV file to generate churn predictions for multiple customers.
-
-### AI-Powered Retention Emails
-
-Uses Gemini to generate personalized customer retention emails.
-
-### Executive Analytics
-
-Provides business insights through Looker Studio dashboards.
-
-### REST API
-
-Offers programmatic access to prediction and analytics features with Swagger documentation.
-
-### Automated Bulk Scoring
-
-Cloud Scheduler triggers a Cloud Run Job for scheduled customer re-scoring.
-
----
-
-# Project Structure
-
-```text
+```
 churn-platform/
-│
-├── app/
-│   ├── app.py
-│   ├── config.py
-│   ├── predictor.py
-│   ├── retention.py
-│   ├── bigquery_client.py
-│   ├── gemini_client.py
-│   ├── auth.py
-│   │
-│   ├── api/
-│   │   └── routes.py
-│   │
-│   ├── templates/
-│   └── static/
-│
+├── app/                    # Flask web app
+│   ├── app.py              # Application factory + UI routes
+│   ├── config.py           # Env-based config
+│   ├── predictor.py        # ML inference + factor attribution
+│   ├── retention.py        # Rule-based recommendation engine
+│   ├── bigquery_client.py  # All BQ reads/writes
+│   ├── gemini_client.py    # Personalised retention email generation
+│   ├── auth.py             # Admin basic-auth gate
+│   ├── api/routes.py       # REST API (Swagger documented)
+│   ├── templates/          # Server-rendered HTML (Tailwind CDN)
+│   └── static/             # CSS + JS
 ├── notebooks/
-│   └── train_churn_model.ipynb
-│
+│   └── train_churn_model.ipynb   # Vertex AI Workbench training pipeline
 ├── jobs/
-│   ├── bulk_score_job.py
+│   ├── bulk_score_job.py   # Cloud Run Job: nightly re-score all customers
 │   └── Dockerfile.job
-│
 ├── sql/
 │   ├── 01_create_tables.sql
 │   ├── 02_create_views.sql
 │   └── 03_daily_aggregations.sql
-│
 ├── deploy/
 │   ├── deploy_app.sh
 │   ├── deploy_job.sh
 │   └── schedule_jobs.sh
-│
 ├── monitoring/
-│   └── alerts.yaml
-│
+│   └── alerts.yaml         # Cloud Monitoring policies
 ├── tests/
-│   └── test_predictor.py
-│
-├── data/
-├── model_artifacts/
-│
+│   └── test_predictor.py   # pytest smoke tests
+├── data/                   # Place IBM Telco CSV here (gitignored)
+├── model_artifacts/        # model.joblib + features_meta.json (gitignored)
 ├── .env.example
 ├── Dockerfile
 ├── requirements.txt
@@ -194,434 +96,184 @@ churn-platform/
 
 ---
 
-# Setup Guide
+## Setup — step by step
 
-## Prerequisites
+### Prerequisites
+- A GCP account with $300 free trial credits
+- Python 3.11+ locally
+- `gcloud` CLI installed and authenticated (`gcloud auth login`)
 
-Before starting, ensure you have:
-
-* A Google Cloud Platform account
-* Python 3.11+
-* Google Cloud CLI installed
-* Authenticated GCP account
-
-```bash
-gcloud auth login
-```
-
----
-
-## 1. Create GCP Project and Enable APIs
+### 1. Create GCP project + enable APIs
 
 ```bash
 PROJECT_ID="churn-platform-$(whoami)-$(date +%s | tail -c 5)"
-
 gcloud projects create $PROJECT_ID
-
 gcloud config set project $PROJECT_ID
-```
 
-Enable the required APIs:
-
-```bash
 gcloud services enable \
-    run.googleapis.com \
-    bigquery.googleapis.com \
-    storage.googleapis.com \
-    aiplatform.googleapis.com \
-    cloudbuild.googleapis.com \
-    cloudscheduler.googleapis.com \
-    generativelanguage.googleapis.com \
-    monitoring.googleapis.com \
-    logging.googleapis.com
+    run.googleapis.com bigquery.googleapis.com storage.googleapis.com \
+    aiplatform.googleapis.com cloudbuild.googleapis.com \
+    cloudscheduler.googleapis.com generativelanguage.googleapis.com \
+    monitoring.googleapis.com logging.googleapis.com
 ```
 
-Link your billing account through the Google Cloud Console.
+Link your billing account in the Cloud Console.
 
----
-
-## 2. Create BigQuery Dataset and Cloud Storage Buckets
-
-Create the BigQuery dataset:
+### 2. Create dataset and buckets
 
 ```bash
-bq --location=US mk -d \
---description "Telco churn data" \
-telco_churn
-```
+bq --location=US mk -d --description "Telco churn data" telco_churn
 
-Create Cloud Storage buckets:
-
-```bash
 gsutil mb -l US gs://${PROJECT_ID}-models
 gsutil mb -l US gs://${PROJECT_ID}-uploads
 ```
 
----
+### 3. Upload the IBM Telco Customer Churn dataset
 
-## 3. Upload the Dataset
+Download `WA_Fn-UseC_-Telco-Customer-Churn.csv` from Kaggle
+(https://www.kaggle.com/datasets/blastchar/telco-customer-churn) into `data/`.
 
-Download the IBM Telco Customer Churn dataset and place it inside the `data/` directory.
-
-Dataset: Kaggle IBM Telco Customer Churn Dataset
-
-Expected file:
-
-```text
-WA_Fn-UseC_-Telco-Customer-Churn.csv
-```
-
-Load the dataset into BigQuery:
+Then load it into BigQuery (auto-detect schema):
 
 ```bash
-bq load \
---autodetect \
---source_format=CSV \
-telco_churn.customers \
-data/WA_Fn-UseC_-Telco-Customer-Churn.csv
+bq load --autodetect --source_format=CSV \
+    telco_churn.customers data/WA_Fn-UseC_-Telco-Customer-Churn.csv
 ```
 
----
+### 4. Create tables and views
 
-## 4. Create Tables and Views
+Open the BigQuery Console, paste and run:
+1. `sql/01_create_tables.sql` (creates predictions, retention_actions, daily_metrics, model_registry)
+2. `sql/02_create_views.sql` (creates the views Looker Studio reads from)
+3. Schedule `sql/03_daily_aggregations.sql` via BigQuery → Scheduled Queries (daily 03:00)
 
-Run the SQL files in the following order:
-
-```text
-sql/01_create_tables.sql
-```
-
-Creates:
-
-* `predictions`
-* `retention_actions`
-* `daily_metrics`
-* `model_registry`
-
-Then run:
-
-```text
-sql/02_create_views.sql
-```
-
-These views are used by Looker Studio.
-
-Schedule the following using BigQuery Scheduled Queries:
-
-```text
-sql/03_daily_aggregations.sql
-```
-
-Recommended schedule:
-
-```text
-Daily at 03:00
-```
-
----
-
-# Environment Configuration
-
-Create your environment file:
+### 5. Configure environment
 
 ```bash
 cp .env.example .env
+# Edit .env and fill in: GCP_PROJECT_ID, GCS_MODEL_BUCKET, GEMINI_API_KEY,
+# FLASK_SECRET_KEY, ADMIN_PASSWORD
 ```
 
-Configure the following variables:
+Get a Gemini API key at https://aistudio.google.com/apikey.
 
-```text
-GCP_PROJECT_ID=
-GCS_MODEL_BUCKET=
-GEMINI_API_KEY=
-FLASK_SECRET_KEY=
-ADMIN_PASSWORD=
-```
+### 6. Train the model
 
----
+Open **Vertex AI Workbench** in the GCP Console → New Notebook → Python 3.
+Upload `notebooks/train_churn_model.ipynb`, set the config in cell 1, and
+"Run all". The notebook will:
 
-## Gemini API Key
+- Load data from BigQuery
+- Train XGBoost with SHAP explainability
+- Save `model.joblib` and `features_meta.json`
+- Upload them to GCS
+- Register the model in the BigQuery `model_registry`
 
-Generate a Gemini API key using Google AI Studio and add it to your `.env` file.
+Download both artifacts to your local `model_artifacts/` folder.
 
----
-
-# Train the Machine Learning Model
-
-Open Vertex AI Workbench and create a Python notebook environment.
-
-Upload:
-
-```text
-notebooks/train_churn_model.ipynb
-```
-
-Configure the required values in the first cell and run all cells.
-
-The training pipeline will:
-
-1. Load customer data from BigQuery
-2. Train an XGBoost model
-3. Generate explainability information
-4. Save the trained model
-5. Upload model artifacts to Cloud Storage
-6. Register the model in BigQuery
-
-Generated artifacts:
-
-```text
-model.joblib
-features_meta.json
-```
-
-These artifacts are stored in:
-
-```text
-model_artifacts/
-```
-
----
-
-# Run Locally
-
-Create and activate a virtual environment:
+### 7. Test locally
 
 ```bash
-python -m venv venv
-source venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+pytest tests/                          # All 6 tests should pass
+python -m app.app                      # http://localhost:8080
 ```
 
-Run tests:
+### 8. Deploy to Cloud Run
 
 ```bash
-pytest tests/
+bash deploy/deploy_app.sh              # builds + deploys the web app
+bash deploy/deploy_job.sh              # builds + registers the scheduled job
+bash deploy/schedule_jobs.sh           # sets up nightly 02:00 IST schedule
 ```
 
-Start the application:
+### 9. Build the Looker Studio dashboard
+
+1. Open https://lookerstudio.google.com → Create → Report
+2. Add data source → BigQuery → `<project>.telco_churn.customers_with_predictions`
+3. Add second data source: `segment_churn_rates`
+4. Add third: `daily_metrics`
+5. Build these tiles:
+   - **Scorecards**: total customers, churn rate, revenue at risk, high-risk count
+   - **Bar chart**: churn rate by Contract type (segment_churn_rates)
+   - **Bar chart**: churn rate by InternetService
+   - **Pie chart**: risk_tier distribution (customers_with_predictions)
+   - **Table**: top 20 at-risk customers
+   - **Geo map**: customers by state, colour = churn probability
+   - **Time series**: daily_metrics over time
+6. (Optional) Enable **Gemini in Looker Studio** for natural-language Q&A.
+
+### 10. Configure monitoring
 
 ```bash
-python -m app.app
-```
-
-The application will be available at:
-
-```text
-http://localhost:8080
+gcloud alpha monitoring policies create --policy-from-file=monitoring/alerts.yaml
 ```
 
 ---
 
-# Deploy to Cloud Run
+## Team contribution split (4 members)
 
-Deploy the web application:
-
-```bash
-bash deploy/deploy_app.sh
-```
-
-Deploy the bulk scoring job:
-
-```bash
-bash deploy/deploy_job.sh
-```
-
-Configure scheduled execution:
-
-```bash
-bash deploy/schedule_jobs.sh
-```
+| Member | Role | Owns |
+|---|---|---|
+| **Member 1** | ML / Data Engineering | `notebooks/train_churn_model.ipynb`, `app/predictor.py`, BigQuery schema (`sql/`), model versioning |
+| **Member 2** | Backend / API | `app/app.py`, `app/api/routes.py`, `app/bigquery_client.py`, `app/auth.py`, Swagger docs |
+| **Member 3** | Frontend / UX | `app/templates/`, `app/static/`, `app/retention.py`, `app/gemini_client.py` |
+| **Member 4** | Analytics / DevOps | Looker Studio dashboard, `deploy/`, `jobs/`, `monitoring/`, Cloud Scheduler, README |
 
 ---
 
-# Looker Studio Dashboard
+## Cost estimate (free tier safe)
 
-Add the following BigQuery data sources:
+| Service | Approx. cost |
+|---|---|
+| Cloud Run web app (min 0 instances) | < $1 / month |
+| BigQuery (< 1 TB queries) | $0 (free tier) |
+| Cloud Storage (< 5 GB) | $0 (free tier) |
+| Vertex AI Workbench (e2-standard-4) | ~$0.20 / hour while running |
+| Gemini API (gemini-1.5-flash) | Free tier: 15 RPM, 1500 / day |
+| Cloud Scheduler | $0 (free tier: 3 jobs) |
+| **Vertex AI Endpoint (optional)** | **~$0.05 / hour while deployed** |
 
-```text
-<project>.telco_churn.customers_with_predictions
-```
-
-```text
-segment_churn_rates
-```
-
-```text
-daily_metrics
-```
-
-Recommended dashboard components:
-
-### Scorecards
-
-* Total Customers
-* Churn Rate
-* Revenue at Risk
-* High-Risk Customer Count
-
-### Charts
-
-* Churn Rate by Contract Type
-* Churn Rate by Internet Service
-* Risk Tier Distribution
-* Top At-Risk Customers
-* Customer Geographic Distribution
-* Daily Churn Metrics
+Recommendation: skip the Vertex Endpoint for the demo. Bundle the model
+into the Cloud Run image (`USE_VERTEX_ENDPOINT=false`). Total cost for the
+project demo runs comfortably under $5.
 
 ---
 
-# Monitoring
+## API quick reference
 
-Create monitoring policies using:
+Once deployed, see the full Swagger UI at `<service-url>/apidocs/`.
 
-```bash
-gcloud alpha monitoring policies create \
---policy-from-file=monitoring/alerts.yaml
-```
-
----
-
-# Team Contribution
-
-| Member   | Role                  | Primary Responsibilities                                              |
-| -------- | --------------------- | --------------------------------------------------------------------- |
-| Member 1 | ML / Data Engineering | Model training, predictor, BigQuery schema, model versioning          |
-| Member 2 | Backend / API         | Flask application, REST API, BigQuery client, authentication, Swagger |
-| Member 3 | Frontend / UX         | UI templates, static assets, retention engine, Gemini integration     |
-| Member 4 | Analytics / DevOps    | Dashboard, deployment, Cloud Run Jobs, monitoring, scheduling, README |
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET  | `/api/health` | Health check + model version |
+| POST | `/api/predict` | Score a single customer |
+| POST | `/api/batch-predict` | Upload CSV → bulk predictions |
+| GET  | `/api/customers/<id>` | Profile + prediction history |
+| GET  | `/api/insights/overall` | Overall stats |
+| GET  | `/api/insights/segments` | Segment-level churn rates |
+| GET  | `/api/insights/top-risk` | Top at-risk customers |
+| POST | `/api/retention-action` | Log a retention action |
+| POST | `/api/generate-email` | Gemini-powered retention email |
+| POST | `/api/whatif` | Counterfactual simulation |
 
 ---
 
-# Estimated Cost
+## Demo script (suggested 5-minute viva flow)
 
-| Service             | Estimated Cost                         |
-| ------------------- | -------------------------------------- |
-| Cloud Run Web App   | < $1 / month                           |
-| BigQuery            | Free tier for eligible usage           |
-| Cloud Storage       | Free tier for small storage usage      |
-| Vertex AI Workbench | Charged while running                  |
-| Gemini API          | Subject to applicable free-tier limits |
-| Cloud Scheduler     | Free tier available for limited jobs   |
-| Vertex AI Endpoint  | Additional cost while deployed         |
-
-**Recommendation:** For demonstrations, bundle the model directly into the Cloud Run application instead of keeping a Vertex AI Endpoint continuously deployed.
+1. **Open Cloud Run URL** → home page
+2. **Pick an existing customer** → click "Score Customer" → show gauge + factors + recommendations
+3. **Click "Mark as taken"** → action logged to BigQuery (open BQ in another tab and `SELECT * FROM retention_actions LIMIT 5`)
+4. **What-If**: change Contract from Month-to-month → Two year → show probability drop
+5. **Batch**: upload a 100-row CSV → show table of predictions
+6. **Admin** (basic-auth) → click "Generate retention email" → show Gemini output
+7. **API Docs** (`/apidocs/`) → try the `/api/predict` endpoint live
+8. **Looker Studio** dashboard → walk through revenue-at-risk, segment rates, geo map
+9. **Cloud Scheduler** → show the nightly bulk-scorer job + its last execution log
 
 ---
 
-# API Reference
+## License
 
-After deployment, access the Swagger documentation at:
-
-```text
-<service-url>/apidocs/
-```
-
-## Available Endpoints
-
-| Method | Endpoint                 | Description                             |
-| ------ | ------------------------ | --------------------------------------- |
-| `GET`  | `/api/health`            | Health check and model version          |
-| `POST` | `/api/predict`           | Predict churn for a single customer     |
-| `POST` | `/api/batch-predict`     | Upload CSV for batch predictions        |
-| `GET`  | `/api/customers/<id>`    | Customer profile and prediction history |
-| `GET`  | `/api/insights/overall`  | Overall churn statistics                |
-| `GET`  | `/api/insights/segments` | Segment-level churn rates               |
-| `GET`  | `/api/insights/top-risk` | Top at-risk customers                   |
-| `POST` | `/api/retention-action`  | Log a retention action                  |
-| `POST` | `/api/generate-email`    | Generate a retention email              |
-| `POST` | `/api/whatif`            | Run counterfactual simulation           |
-
----
-
-# Suggested Demo Flow
-
-1. Open the deployed Cloud Run application.
-2. Select an existing customer and score the customer.
-3. Demonstrate churn probability, risk factors, and recommendations.
-4. Log a retention action and verify it in BigQuery.
-5. Perform a What-If analysis by changing the customer's contract.
-6. Upload a CSV file for batch prediction.
-7. Generate a personalized retention email using Gemini.
-8. Demonstrate the REST API through Swagger.
-9. Walk through the Looker Studio dashboard.
-10. Show the Cloud Scheduler configuration and Cloud Run Job execution logs.
-
----
-
-# Technology Stack
-
-### Backend
-
-* Python
-* Flask
-* Gunicorn
-
-### Machine Learning
-
-* XGBoost
-* SHAP
-
-### Cloud Platform
-
-* Google Cloud Platform
-
-### Data and Storage
-
-* BigQuery
-* Google Cloud Storage
-
-### AI
-
-* Vertex AI
-* Gemini API
-
-### Deployment
-
-* Cloud Run
-* Cloud Run Jobs
-* Cloud Build
-
-### Analytics
-
-* Looker Studio
-
-### Monitoring
-
-* Cloud Logging
-* Cloud Monitoring
-
----
-
-# SDG Contribution
-
-## SDG 8 — Decent Work and Economic Growth
-
-The platform helps businesses improve customer retention, reduce revenue loss, and support sustainable business growth through data-driven decision-making.
-
-## SDG 9 — Industry, Innovation and Infrastructure
-
-The project demonstrates the use of cloud infrastructure, machine learning, AI, and analytics to build scalable and innovative digital solutions.
-
----
-
-# Future Improvements
-
-* Real-time streaming predictions
-* Advanced customer segmentation
-* Automated retention campaign execution
-* Additional machine learning models
-* Role-based authentication
-* Advanced model monitoring
-* Automated model retraining
-* CRM platform integration
-
----
-
-# License
-
-This project was developed as an academic mini-project for the **23CSE363 Cloud Computing** course.
+Built for educational use. Dataset © IBM Sample Datasets.
